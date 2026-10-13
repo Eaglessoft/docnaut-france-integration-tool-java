@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('documents', 'Send a document',
+        'The portal generates the idempotency key and streams the file straight through.',
+        ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{/documents}" class="button quiet">All documents</a>
+</div>
+<div th:fragment="content">
+
+  <div th:if="${accepted}" class="notice good">
+    <h2>Accepted</h2>
+    <p>
+      The uploaded file was accepted as
+      <code th:text="${accepted.documentTraceId()}">trace</code>.
+    </p>
+    <p style="margin-top:10px">
+      <a class="button small" th:href="@{'/documents/' + ${accepted.documentTraceId()}}">Open the document</a>
+    </p>
+  </div>
+  <div th:if="${exchange != null and !exchange.successful()}" class="notice bad">
+    <h2 th:text="${exchange.unreachable()} ? 'The Client API could not be reached'
+                 : 'The API rejected this submission (' + ${exchange.status()} + ')'">Rejected</h2>
+    <p>No successful API response was received. Preserve this submission key and check the document before retrying if the outcome is uncertain.</p>
+  </div>
+
+  <div class="card">
+    <h2>Document</h2>
+    <p class="hint">Document identity and category are extracted from the validated file.</p>
+    <form th:action="@{/documents}" method="post" enctype="multipart/form-data">
+      <div class="field">
+        <label for="source">File</label>
+        <input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
+        <input id="source" name="source" type="file" required>
+      </div>
+      <button type="submit">Send document</button>
+    </form>
+  </div>
+
+</div>
+</body>
+</html>

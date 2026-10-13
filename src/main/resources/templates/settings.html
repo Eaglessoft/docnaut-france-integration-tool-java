@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('settings', 'Settings',
+        'The preferences this tenant owns, and the credential you signed in with.',
+        ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions"></div>
+<div th:fragment="content">
+
+  <div th:if="${configurationSaved}" class="notice good">
+    <h2>Configuration saved</h2>
+    <p>The values below are the ones the API now holds.</p>
+  </div>
+  <div th:if="${rotatedSecret}" class="notice good">
+    <h2>New client secret</h2>
+    <p>This replaces the credential you signed in with. It is shown once and the portal never stores
+      it. Copy it, then sign in again with it.</p>
+    <code class="secret" th:text="${rotatedSecret}">secret</code>
+  </div>
+
+  <div th:if="${configuration}" class="card">
+    <h2>Preferences</h2>
+    <p class="hint">Presentation metadata only. The concurrency check uses the entity tag of the read
+      this screen was built from, so there is nothing to type.</p>
+    <form th:action="@{/settings/configuration}" method="post">
+      <input type="hidden" name="ifMatch" th:value="${etag}">
+      <div class="row">
+        <div class="field">
+          <label for="preferredLocale">Preferred locale</label>
+          <input id="preferredLocale" name="preferredLocale" required
+                 th:value="${configuration.preferredLocale()}" placeholder="fr-FR">
+        </div>
+        <div class="field">
+          <label for="preferredTimeZone">Preferred time zone</label>
+          <input id="preferredTimeZone" name="preferredTimeZone" required
+                 th:value="${configuration.preferredTimeZone()}" placeholder="Europe/Paris">
+        </div>
+      </div>
+      <button type="submit">Save preferences</button>
+    </form>
+  </div>
+  <div th:unless="${configuration}" class="card">
+    <h2>Preferences</h2>
+    <div th:replace="~{fragments :: refused(${configurationExchange}, 'the configuration')}"></div>
+  </div>
+
+  <div th:if="${profile}" class="card">
+    <h2>Credential</h2>
+    <dl class="facts">
+      <dt>Client id</dt><dd><code th:text="${profile.serviceClientId()}">id</code></dd>
+      <dt>Tenant</dt>
+      <dd>
+        <span th:text="${profile.tenantName()}">tenant</span>
+        <span th:replace="~{fragments :: badge(${profile.tenantStatus()})}"></span>
+      </dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Rotate this client's secret</h2>
+    <p class="hint">This replaces the credential this session signed in with. The old secret stops
+      working immediately and nothing is retried automatically.</p>
+    <form th:action="@{/settings/rotate-secret}" method="post">
+      <div class="field">
+        <label for="reason">Reason</label>
+        <input id="reason" name="reason" required minlength="3" maxlength="500"
+               placeholder="why the secret is being rotated">
+      </div>
+      <button type="submit" class="danger">Rotate secret</button>
+    </form>
+  </div>
+
+</div>
+</body>
+</html>

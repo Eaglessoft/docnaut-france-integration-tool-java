@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('webhooks',
+        ${subscription != null} ? ${subscription.name()} : 'Subscription',
+        ${subscriptionId}, ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{/webhooks}" class="button quiet">All webhooks</a>
+</div>
+<div th:fragment="content">
+
+  <div th:if="${issuedSecret}" class="notice good">
+    <h2>New signing secret</h2>
+    <p>Shown once and never stored by the portal. Copy it now.</p>
+    <code class="secret" th:text="${issuedSecret}">secret</code>
+  </div>
+  <div th:if="${verificationStarted}" class="notice">
+    <h2>Verification started</h2>
+    <p>A 202 means the connector began verifying the endpoint, never that the subscription is active.
+      The status below is the subscription as it stands right now.</p>
+  </div>
+
+  <div th:if="${subscription}" class="card">
+    <h2>Subscription</h2>
+    <dl class="facts">
+      <dt>Status</dt><dd><span th:replace="~{fragments :: badge(${subscription.status()})}"></span></dd>
+      <dt>Endpoint</dt><dd><code th:text="${subscription.endpoint()}">endpoint</code></dd>
+      <dt>Events</dt>
+      <dd>
+        <span th:if="${subscription.mode() != 'SELECTED'}">All client events</span>
+        <span th:if="${subscription.mode() == 'SELECTED'}">
+          <span th:each="type : ${subscription.eventTypes()}" class="chip" th:text="${type}">type</span>
+        </span>
+      </dd>
+      <dt th:if="${!subscription.customHeaderNames().isEmpty()}">Custom headers</dt>
+      <dd th:if="${!subscription.customHeaderNames().isEmpty()}">
+        <span th:each="header : ${subscription.customHeaderNames()}" class="chip" th:text="${header}">header</span>
+        <div class="hint">Managed on the admin surface; values are never exposed here.</div>
+      </dd>
+      <dt>Version</dt><dd th:text="${subscription.version()}">0</dd>
+      <dt>Created</dt><dd th:text="${subscription.createdAt()}">when</dd>
+      <dt>Updated</dt><dd th:text="${subscription.updatedAt()}">when</dd>
+    </dl>
+  </div>
+  <div th:unless="${subscription}" class="card">
+    <h2>Subscription</h2>
+    <div th:replace="~{fragments :: refused(${exchange}, 'this subscription')}"></div>
+  </div>
+
+  <div th:if="${subscription}" class="card">
+    <h2>Edit</h2>
+    <p class="hint">The concurrency check uses the version this screen just read, so there is nothing to type.</p>
+    <form th:action="@{'/webhooks/' + ${subscriptionId}}" method="post">
+      <input type="hidden" name="version" th:value="${subscription.version()}">
+      <div class="row">
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" name="name" required maxlength="100" th:value="${subscription.name()}">
+        </div>
+        <div class="field">
+          <label for="endpoint">HTTPS endpoint</label>
+          <input id="endpoint" name="endpoint" type="url" required pattern="https://.*"
+                 th:value="${subscription.endpoint()}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Events</label>
+        <div class="choice">
+          <input type="radio" id="mode-all" name="mode" value="ALL_CLIENT_EVENTS"
+                 th:checked="${subscription.mode() != 'SELECTED'}">
+          <label for="mode-all">All client events</label>
+        </div>
+        <div class="choice">
+          <input type="radio" id="mode-selected" name="mode" value="SELECTED"
+                 th:checked="${subscription.mode() == 'SELECTED'}">
+          <label for="mode-selected">Only the ones I choose</label>
+        </div>
+        <div style="margin:8px 0 0 26px">
+          <div class="choice" th:each="type,i : ${eventTypes}">
+            <input type="checkbox" th:id="'type-' + ${i.index}" name="eventTypes" th:value="${type}"
+                   th:checked="${subscription.eventTypes().contains(type)}">
+            <label th:for="'type-' + ${i.index}" th:text="${type}">type</label>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Delivery</label>
+        <div class="choice">
+          <input type="checkbox" id="active" name="active" value="true"
+                 th:checked="${subscription.status() == 'ACTIVE'}">
+          <label for="active">Active</label>
+        </div>
+      </div>
+      <button type="submit">Save changes</button>
+    </form>
+  </div>
+
+  <div th:if="${subscription}" class="card">
+    <h2>Verify the endpoint</h2>
+    <p class="hint">The connector calls the endpoint with a challenge. Re-read the subscription to see
+      where it ended up; the portal never presents a 202 as activation.</p>
+    <form th:action="@{'/webhooks/' + ${subscriptionId} + '/verify'}" method="post">
+      <button type="submit" class="quiet">Start verification</button>
+    </form>
+  </div>
+
+  <div th:if="${subscription}" class="card">
+    <h2>Rotate the signing secret</h2>
+    <p class="hint">The replacement is displayed once. Anything still signing with the old secret will fail.</p>
+    <form th:action="@{'/webhooks/' + ${subscriptionId} + '/rotate-secret'}" method="post">
+      <div class="field">
+        <label for="reason">Reason</label>
+        <input id="reason" name="reason" placeholder="why the secret is being rotated">
+      </div>
+      <button type="submit" class="danger">Rotate secret</button>
+    </form>
+  </div>
+
+</div>
+</body>
+</html>

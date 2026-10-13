@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docnaut France Integration Tool · Sign in</title>
+  <link rel="stylesheet" th:href="@{/assets/portal.css}">
+</head>
+<body class="centred">
+<main class="signin">
+  <img class="brand-logo" th:src="@{/assets/docnaut-logo.webp}" alt="Docnaut">
+  <h1>France Integration Tool</h1>
+  <p class="lead">Sign in with the service-client credentials you want to test.</p>
+  <p th:if="${param.failed}" class="notice bad">
+    Those credentials were rejected, or the identity provider could not be reached.</p>
+  <p th:if="${param.signedOut}" class="notice">Signed out. The credentials were discarded.</p>
+  <form th:action="@{/login}" method="post">
+    <div class="field"><label for="environment">Environment</label><select id="environment" name="environment"><option>Sandbox</option><option>Production</option></select></div>
+    <div class="field">
+      <label for="clientId">Client id</label>
+      <input id="clientId" name="clientId" autocomplete="off" required autofocus>
+    </div>
+    <div class="field">
+      <label for="clientSecret">Client secret</label>
+      <input id="clientSecret" name="clientSecret" type="password" autocomplete="off" required>
+    </div>
+    <button type="submit">Sign in</button>
+  </form>
+  <p class="meta">The secret is kept in this server-side session only and is discarded on sign-out.</p>
+</main>
+</body>
+</html>

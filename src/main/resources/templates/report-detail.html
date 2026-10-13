@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:replace="~{layout :: page('reporting', 'Regulatory report', 'Current report state from the Client API', ~{::actions}, ~{::content})}">
+<body><div th:fragment="actions"><a th:href="@{/documents}" class="button quiet">Documents</a></div><div th:fragment="content">
+<section th:if="${report}" class="card"><h2>Regulatory report</h2><dl class="facts">
+<dt>Report</dt><dd><a th:href="@{'/reports/' + ${report.reportId()}}" th:text="${report.reportId()}"></a></dd>
+<dt>Kind / interface</dt><dd th:text="${report.kind()} + ' / ' + ${report.interfaceCode()}"></dd>
+<dt>Status</dt><dd th:text="${report.status()}"></dd><dt>Period</dt><dd th:text="${report.periodStart()} + ' — ' + ${report.periodEnd()}"></dd>
+<dt>Transport reference</dt><dd th:text="${report.transportReference()} ?: 'None'"></dd>
+<dt>Transmitted</dt><dd th:text="${report.transmittedAt()} ?: 'Not transmitted'"></dd><dt>Created</dt><dd th:text="${report.createdAt()}"></dd></dl></section><div th:if="${report == null}" class="notice bad">Report unavailable. Inspect the API response below.</div>
+<section class="card"><h2>PPF receipts</h2>
+<p>Transport upload and business acceptance are separate. Up to 100 correlated receipts are shown in arrival order.</p>
+<div th:unless="${receiptsExchange.successful()}" th:replace="~{fragments :: refused(${receiptsExchange}, 'report receipts')}"></div>
+<p th:if="${receiptsExchange.successful() and receipts == null}">Receipt response could not be read. Inspect the API response below.</p>
+<p th:if="${receipts != null and receipts.isEmpty()}">No correlated receipt has been recorded.</p>
+<table th:if="${receipts != null and !receipts.isEmpty()}">
+<thead><tr><th>Receipt / interface</th><th>Correlation</th><th>Business status</th><th>Remote result</th><th>SHA-256</th><th>Received</th></tr></thead>
+<tbody><tr th:each="receipt : ${receipts}">
+<td><code th:text="${receipt.id()}"></code><p th:text="${receipt.interfaceCode()}"></p></td>
+<td><span th:text="${receipt.correlationStatus()}"></span><p th:text="${receipt.correlationReason()}"></p></td>
+<td th:text="${receipt.businessStatus()}"></td>
+<td><span th:text="${receipt.remoteStatusCode()}"></span><p th:text="${receipt.remoteReason()}"></p></td>
+<td><code th:text="${receipt.sha256()}"></code></td><td th:text="${receipt.receivedAt()}"></td>
+</tr></tbody></table></section>
+</div></body></html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('documents',
+        ${document != null} ? ${document.tenantDocumentNumber()} : 'Document',
+        'Trace ' + ${documentTraceId}, ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{'/documents/' + ${documentTraceId} + '/payment'}" class="button">Register payment</a>
+  <a th:href="@{/documents}" class="button quiet">All documents</a>
+</div>
+<div th:fragment="content">
+
+  <div th:if="${downloadFailure}" class="notice bad">
+    <h2 th:text="'The download was refused (' + ${downloadFailure.status()} + ')'">Refused</h2>
+    <p>No bytes were sent. The problem document is in the API calls below.</p>
+  </div>
+
+  <div th:if="${document}" class="card">
+    <h2>Document</h2>
+    <dl class="facts">
+      <dt>Number</dt><dd th:text="${document.tenantDocumentNumber()}">number</dd>
+      <dt>Year</dt><dd th:text="${document.documentYear()}">year</dd>
+      <dt>Category</dt><dd th:text="${document.declaredDocumentCategory()}">category</dd>
+      <dt>Status</dt><dd><span th:replace="~{fragments :: badge(${document.intakeStatus()})}"></span></dd>
+      <dt>File</dt><dd th:text="${document.originalFileName()} + ' · ' + ${document.mediaType()}">file</dd>
+      <dt>Size</dt><dd th:text="${document.contentLength()} + ' bytes'">size</dd>
+      <dt>SHA-256</dt><dd><code th:text="${document.sha256()}">hash</code></dd>
+      <dt>Created</dt><dd th:text="${document.createdAt()}">when</dd>
+      <dt>Trace id</dt><dd><code th:text="${document.documentTraceId()}">trace</code></dd>
+    </dl>
+  </div>
+  <div th:unless="${document}" class="card">
+    <h2>Document</h2>
+    <div th:replace="~{fragments :: refused(${documentExchange}, 'this document')}"></div>
+  </div>
+
+  <div th:if="${decisionNoticeTitle}" class="notice"
+       th:classappend="${decisionNoticeGood} ? 'good' : 'bad'" role="status">
+    <h2 th:text="${decisionNoticeTitle}">Decision result</h2>
+    <p>
+      <span th:text="${decisionNoticeMessage}">Result</span>
+      <span th:if="${decisionNoticeCode}"> Code: <code th:text="${decisionNoticeCode}">code</code>.</span>
+    </p>
+  </div>
+
+  <section class="card" aria-labelledby="invoice-decision-heading">
+    <h2 id="invoice-decision-heading">Invoice decision</h2>
+    <p class="hint">Record a buyer decision. Chorus invoices may be suspended before a final decision. PPF, Peppol and Chorus outcomes remain independent.</p>
+
+    <div th:if="${decision}">
+      <dl class="facts decision-facts">
+        <dt>Sequence</dt><dd th:text="${decision.sequence()}">sequence</dd>
+        <dt>Decision</dt><dd><span th:replace="~{fragments :: badge(${decision.decision()})}"></span></dd>
+        <dt>Reason code</dt><dd th:text="${decision.reasonCode()} ?: 'Not applicable'">reason</dd>
+        <dt>Comment</dt><dd th:text="${decision.comment()} ?: 'Not applicable'">comment</dd>
+        <dt>Expected action</dt><dd th:text="${decision.expectedAction()} ?: 'Not specified'">action</dd>
+        <dt>Decided</dt><dd th:text="${decision.createdAt()}">time</dd>
+        <dt>Decision id</dt><dd><code th:text="${decision.decisionId()}">id</code></dd>
+      </dl>
+      <div class="grid decision-legs" aria-label="Independent action states">
+        <div class="tile" th:if="${decision.chorus().status() != null}">
+          <div class="k">Chorus lifecycle delivery</div>
+          <div><span th:replace="~{fragments :: badge(${decision.chorus().status()})}"></span></div>
+          <p th:if="${decision.chorus().reportId()}" class="hint">Transmission <code th:text="${decision.chorus().reportId()}"></code></p>
+          <p th:if="${decision.chorus().errorCode()}" class="hint">Code <code th:text="${decision.chorus().errorCode()}"></code></p>
+        </div>
+        <div class="tile">
+          <div class="k">PPF / F6 action</div>
+          <div><span th:replace="~{fragments :: badge(${decision.ppf().status()})}"></span></div>
+          <p th:if="${decision.ppf().errorCode()}" class="hint">
+            Code <code th:text="${decision.ppf().errorCode()}">code</code>
+          </p>
+          <p th:if="${decision.ppf().reportId()}" class="hint">
+            F6 report <code th:text="${decision.ppf().reportId()}">report id</code>
+          </p>
+        </div>
+        <div class="tile">
+          <div class="k">Peppol Invoice Response</div>
+          <div><span th:replace="~{fragments :: badge(${decision.peppol().status()})}"></span></div>
+          <p th:if="${decision.peppol().errorCode()}" class="hint">
+            Code <code th:text="${decision.peppol().errorCode()}">code</code>
+          </p>
+        </div>
+      </div>
+    </div>
+    <table th:if="${decision != null and !decision.history().isEmpty()}">
+      <caption>Decision history</caption>
+      <thead><tr><th>Sequence</th><th>Decision</th><th>Reason</th><th>Comment</th><th>Chorus delivery</th><th>Time</th></tr></thead>
+      <tbody><tr th:each="entry : ${decision.history()}">
+        <td th:text="${entry.sequence()}"></td><td th:text="${entry.decision()}"></td>
+        <td th:text="${entry.reasonCode()}"></td><td th:text="${entry.comment()}"></td>
+        <td><span th:text="${entry.chorus().status()}"></span>
+          <code th:text="${entry.chorus().reportId()}"></code>
+          <code th:text="${entry.chorus().errorCode()}"></code></td>
+        <td th:text="${entry.createdAt()}"></td>
+      </tr></tbody>
+    </table>
+    <div th:if="${decision == null and decisionExchange.status() == 404}" class="notice">
+      <h2>No final decision</h2>
+      <p>The API has no decision action for this document. An eligible assigned inbound invoice can be decided below.</p>
+    </div>
+    <div th:if="${decision == null and decisionExchange.successful()}" class="notice bad">
+      <h2>Decision response could not be read</h2>
+      <p>The form stays disabled. Open the API calls below to inspect the response.</p>
+    </div>
+    <div th:if="${decision == null and decisionExchange.status() != 404 and !decisionExchange.successful()}">
+      <div th:replace="~{fragments :: refused(${decisionExchange}, 'the invoice decision')}"></div>
+    </div>
+
+    <form th:action="@{'/documents/' + ${documentTraceId} + '/decision'}" method="post" class="decision-form">
+      <fieldset th:disabled="${!decisionFormEnabled}">
+        <legend th:text="${decisionFormEnabled} ? 'Record a decision' : 'The decision form is disabled'">
+          Record a decision
+        </legend>
+        <input type="hidden" name="idempotencyKey" th:value="${decisionForm.idempotencyKey()}">
+        <div class="choice-row">
+          <label class="choice">
+            <input type="radio" name="decision" value="ACCEPTED" required
+                   th:checked="${decisionForm.decision() == 'ACCEPTED'}"> Accept invoice
+          </label>
+          <label class="choice">
+            <input type="radio" name="decision" value="REFUSED" required
+                   th:checked="${decisionForm.decision() == 'REFUSED'}"> Refuse invoice
+          </label>
+          <label class="choice">
+            <input type="radio" name="decision" value="SUSPENDED" required
+                   th:checked="${decisionForm.decision() == 'SUSPENDED'}"> Suspend invoice (Chorus only)
+          </label>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="reasonCode">Reason code</label>
+            <input id="reasonCode" name="reasonCode" maxlength="64"
+                   pattern="[A-Z0-9][A-Z0-9._-]{0,63}" autocomplete="off"
+                   th:value="${decisionForm.reasonCode()}" aria-describedby="refusal-help">
+          </div>
+          <div class="field">
+            <label for="expectedAction">Expected action <span class="optional">(optional)</span></label>
+            <select id="expectedAction" name="expectedAction" aria-describedby="refusal-help">
+              <option value="">No expected action</option>
+              <option value="NOA" th:selected="${decisionForm.expectedAction() == 'NOA'}">NOA - No action</option>
+              <option value="PIN" th:selected="${decisionForm.expectedAction() == 'PIN'}">PIN - Pay invoice</option>
+              <option value="NIN" th:selected="${decisionForm.expectedAction() == 'NIN'}">NIN - Do not pay invoice</option>
+              <option value="CNF" th:selected="${decisionForm.expectedAction() == 'CNF'}">CNF - Issue credit note in full</option>
+              <option value="CNP" th:selected="${decisionForm.expectedAction() == 'CNP'}">CNP - Issue partial credit note</option>
+              <option value="CNA" th:selected="${decisionForm.expectedAction() == 'CNA'}">CNA - Issue credit note and new invoice</option>
+              <option value="OTH" th:selected="${decisionForm.expectedAction() == 'OTH'}">OTH - Other action</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="comment">Decision comment</label>
+          <textarea id="comment" name="comment" rows="3" maxlength="500"
+                    th:text="${decisionForm.comment()}" aria-describedby="refusal-help"></textarea>
+          <p id="refusal-help" class="field-help">Reason code and comment are required for REFUSED and SUSPENDED and must be empty for ACCEPTED. Suspension is Chorus-only; leave expected action empty. After suspension, submit a final acceptance or refusal with a new submission key.</p>
+        </div>
+<p class="field-help">Chorus suspension reasons: JUSTIF_ABS, COORD_BANC_ERR, CMD_ERR, SIRET_ERR, CODE_ROUTAGE_ERR, REF_CT_ABSENT, REF_ERR.</p>
+        <button type="submit" th:disabled="${!decisionFormEnabled}">Submit decision</button>
+      </fieldset>
+    </form>
+  </section>
+
+  <div class="card" th:if="${processing != null}">
+    <h2>External service calls</h2>
+    <p class="hint">Sanitized request and response evidence recorded for this document.</p>
+    <div th:if="${processing.externalCalls().isEmpty()}" class="empty"><strong>No external calls recorded</strong></div>
+    <table th:unless="${processing.externalCalls().isEmpty()}">
+      <thead><tr><th>System</th><th>Operation</th><th>Outcome</th><th>Request JSON</th><th>Response JSON</th><th>Time</th></tr></thead>
+      <tbody><tr th:each="call : ${processing.externalCalls()}">
+        <td th:text="${call.system()}">system</td><td th:text="${call.operation()}">operation</td>
+        <td><span th:replace="~{fragments :: badge(${call.outcome()})}"></span></td>
+        <td><code th:text="${call.requestJson()}">request</code></td>
+        <td><code th:text="${call.responseJson()}">response</code></td>
+        <td th:text="${call.occurredAt()}">time</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Processing result</h2>
+    <div th:if="${processing}">
+      <dl class="facts">
+        <dt>Status</dt><dd><span th:replace="~{fragments :: badge(${processing.status()})}"></span></dd>
+        <dt>Current stage</dt><dd th:text="${processing.currentStage()}">stage</dd>
+        <dt>Error code</dt><dd th:text="${processing.safeErrorCode()} ?: 'None'">error</dd>
+        <dt>Updated</dt><dd th:text="${processing.updatedAt()}">updated</dd>
+      </dl>
+      <table th:if="${!processing.attempts().isEmpty()}">
+        <thead><tr><th>Stage</th><th>Outcome</th><th>Attempt</th><th>Error</th><th>Completed</th></tr></thead>
+        <tbody>
+        <tr th:each="attempt : ${processing.attempts()}">
+          <td th:text="${attempt.stage()}">stage</td>
+          <td><span th:replace="~{fragments :: badge(${attempt.outcome()})}"></span></td>
+          <td th:text="${attempt.attemptNumber()}">attempt</td>
+          <td th:text="${attempt.safeErrorCode()} ?: 'None'">error</td>
+          <td th:text="${attempt.completedAt()}">completed</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div th:if="${processing == null and processingExchange.status() == 404}" class="empty">
+      <strong>Processing has not started yet</strong>
+      <p>Reload this page to fetch the latest result.</p>
+    </div>
+    <div th:if="${processing == null and processingExchange.status() != 404}">
+      <div th:replace="~{fragments :: refused(${processingExchange}, 'the processing result')}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Timeline</h2>
+    <p class="hint">What the connector recorded about this document.</p>
+    <ul th:if="${eventsExchange.successful() and !events.empty()}" class="timeline">
+      <li th:each="event : ${events.items()}">
+        <div th:text="${event.type()}">type</div>
+        <div class="when" th:text="${event.occurredAt()}">when</div>
+      </li>
+    </ul>
+    <div th:if="${eventsExchange.successful() and events.empty()}" class="empty">
+      <strong>No events recorded</strong>
+    </div>
+    <div th:unless="${eventsExchange.successful()}">
+      <div th:replace="~{fragments :: refused(${eventsExchange}, 'the events')}"></div>
+    </div>
+  </div>
+
+  <div class="card tight">
+    <h2>Files</h2>
+    <p class="hint">The bytes stream straight to your browser; the API exposes no storage locator.</p>
+    <div th:if="${artifactsExchange.successful() and !artifacts.empty()}" class="wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Media type</th><th>Size</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="artifact : ${artifacts.items()}">
+          <td th:text="${artifact.type()}">type</td>
+          <td th:text="${artifact.mediaType()}">media</td>
+          <td th:text="${artifact.contentLength()} + ' B'">size</td>
+          <td class="id" th:text="${artifact.createdAt()}">when</td>
+          <td class="right">
+            <form th:action="@{'/documents/' + ${documentTraceId} + '/download'}" method="post">
+              <input type="hidden" name="artifactId" th:value="${artifact.artifactId()}">
+              <button type="submit" class="quiet small">Download</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div th:if="${artifactsExchange.successful() and artifacts.empty()}" class="empty">
+      <strong>No files</strong>
+    </div>
+    <div th:unless="${artifactsExchange.successful()}">
+      <div th:replace="~{fragments :: refused(${artifactsExchange}, 'the files')}"></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

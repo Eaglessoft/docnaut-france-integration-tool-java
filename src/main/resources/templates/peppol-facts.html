@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('peppol', 'Peppol facts', 'Read the facts returned by the Client API.', ~{}, ~{::section})}">
+<section>
+  <form th:action="@{/peppol-facts}" method="get" class="card">
+    <label for="cursor">Cursor</label><input id="cursor" name="cursor">
+    <label for="limit">Limit</label><input id="limit" name="limit" type="number" min="1" max="100" value="25">
+    <button type="submit">Read facts</button>
+  </form>
+  <div th:replace="~{fragments :: call(${exchange})}"></div>
+  <div th:replace="~{fragments :: pager('/peppol-facts', ${nextCursor})}"></div>
+</section>
+</html>

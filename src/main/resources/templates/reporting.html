@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:replace="~{layout :: page('reporting', 'Reporting', 'Submit an immutable F10 initial or corrective transmission', ~{::actions}, ~{::content})}">
+<body><div th:fragment="actions"><a th:href="@{/documents}" class="button quiet">Documents</a></div><div th:fragment="content">
+<div th:if="${formError}" class="notice bad" role="alert" th:text="${formError}"></div>
+<div th:if="${exchange}" class="notice" th:classappend="${exchange.successful()} ? 'good' : 'bad'" role="status">
+<h2 th:text="${exchange.successful()} ? 'API request accepted or replayed' : 'Request was not accepted'"></h2>
+<p th:text="'HTTP ' + ${exchange.status()} + ' · Correlation: ' + ${exchange.correlationId()}"></p>
+<p>Submission is distinct from SFTP upload and remote business acceptance. Inspect the report and Operations evidence.</p></div><section th:if="${report}" class="card"><h2>Regulatory report</h2><dl class="facts">
+<dt>Report</dt><dd><a th:href="@{'/reports/' + ${report.reportId()}}" th:text="${report.reportId()}"></a></dd>
+<dt>Kind / interface</dt><dd th:text="${report.kind()} + ' / ' + ${report.interfaceCode()}"></dd>
+<dt>Status</dt><dd th:text="${report.status()}"></dd><dt>Period</dt><dd th:text="${report.periodStart()} + ' — ' + ${report.periodEnd()}"></dd>
+<dt>Transport reference</dt><dd th:text="${report.transportReference()} ?: 'None'"></dd>
+<dt>Transmitted</dt><dd th:text="${report.transmittedAt()} ?: 'Not transmitted'"></dd><dt>Created</dt><dd th:text="${report.createdAt()}"></dd></dl></section>
+<section th:if="${transmissionResult}" class="card"><h2>Immutable revision</h2><dl class="facts"><dt>Category / kind</dt><dd th:text="${transmissionResult.category()} + ' / ' + ${transmissionResult.kind()}"></dd><dt>Revision</dt><dd th:text="${transmissionResult.revision()}"></dd><dt>Previous report</dt><dd th:text="${transmissionResult.previousReportId()} ?: 'Initial transmission'"></dd><dt>Replayed</dt><dd th:text="${transmissionResult.replayed()}"></dd></dl></section>
+<section class="card"><h2>F10 transmission</h2><p>Upload the prepared F10 XML. The API verifies ownership, period, category and correction linkage. An initial report must have established dispatch before correction.</p>
+<form th:action="@{/reporting}" method="post" enctype="multipart/form-data">
+<input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
+<div class="row"><div class="field"><label for="period">Period</label><input type="month" id="period" name="period" required th:value="${fields['period']}"></div>
+<div class="field"><label for="category">Category</label><select id="category" name="category"><option value="SALES" th:selected="${fields['category'] == 'SALES'}">Sales</option><option value="COLLECTIONS" th:selected="${fields['category'] == 'COLLECTIONS'}">Collections</option></select></div>
+<div class="field"><label for="kind">Transmission kind</label><select id="kind" name="kind"><option value="INITIAL">Initial</option><option value="CORRECTION" th:selected="${fields['kind'] == 'CORRECTION'}">Correction</option></select></div></div>
+<div class="field"><label for="previousReportId">Previous report ID (required for correction)</label><input id="previousReportId" name="previousReportId" th:value="${fields['previousReportId']}"></div>
+<div class="field"><label for="source">F10 XML</label><input type="file" id="source" name="source" accept=".xml,application/xml" required></div>
+<button type="submit">Submit transmission</button></form></section>
+</div></body></html>

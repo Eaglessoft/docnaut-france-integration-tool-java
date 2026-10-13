@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('overview', 'Overview',
+        'Everything here follows from the credentials you signed in with.', ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{/documents/send}" class="button">Send a document</a>
+</div>
+<div th:fragment="content">
+
+  <div th:if="${profile}" class="card">
+    <h2>Connection</h2>
+    <dl class="facts">
+      <dt>Tenant</dt>
+      <dd>
+        <span th:text="${profile.tenantName()} ?: '—'">tenant</span>
+        <span th:replace="~{fragments :: badge(${profile.tenantStatus()})}"></span>
+      </dd>
+      <dt>Service client</dt>
+      <dd><code th:text="${profile.serviceClientId()}">id</code></dd>
+      <dt th:text="'Permissions (' + ${profile.permissions().size()} + ')'">Permissions</dt>
+      <dd>
+        <span th:each="permission : ${profile.permissions()}" class="chip"
+              th:text="${permission}">permission</span>
+      </dd>
+    </dl>
+  </div>
+  <div th:unless="${profile}" class="card">
+    <h2>Connection</h2>
+    <div th:replace="~{fragments :: refused(${profileExchange}, 'the profile')}"></div>
+  </div>
+
+  <div class="grid" style="margin-bottom:18px">
+    <div class="tile">
+      <div class="n" th:text="${documents != null} ? ${documents.items().size()} : '—'">0</div>
+      <div class="k">Recent documents</div>
+    </div>
+    <div class="tile">
+      <div class="n" th:text="${subscriptions != null} ? ${subscriptions.items().size()} : '—'">0</div>
+      <div class="k">Webhook subscriptions</div>
+    </div>
+    <div class="tile">
+      <div class="n" th:text="${profile != null} ? ${profile.permissions().size()} : '—'">0</div>
+      <div class="k">Permissions granted</div>
+    </div>
+  </div>
+
+  <div class="card tight">
+    <h2>Latest documents</h2>
+    <p class="hint">The most recent submissions for this tenant.</p>
+    <div th:if="${documentsExchange.successful() and !documents.empty()}" class="wrap">
+      <table>
+        <thead>
+        <tr><th>Number</th><th>Category</th><th>File</th><th>Status</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="document : ${documents.items()}">
+          <td th:text="${document.tenantDocumentNumber()}">number</td>
+          <td th:text="${document.declaredDocumentCategory()}">category</td>
+          <td th:text="${document.originalFileName()}">file</td>
+          <td><span th:replace="~{fragments :: badge(${document.intakeStatus()})}"></span></td>
+          <td class="id" th:text="${document.createdAt()}">when</td>
+          <td class="right">
+            <a class="button quiet small"
+               th:href="@{'/documents/' + ${document.documentTraceId()}}">Open</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div th:if="${documentsExchange.successful() and documents.empty()}" class="empty">
+      <strong>No documents yet</strong>
+      <span>Send one to see it appear here.</span>
+    </div>
+    <div th:unless="${documentsExchange.successful()}">
+      <div th:replace="~{fragments :: refused(${documentsExchange}, 'the document list')}"></div>
+    </div>
+  </div>
+
+  <div class="card tight">
+    <h2>Webhook subscriptions</h2>
+    <p class="hint">Where this tenant asks to be notified.</p>
+    <div th:if="${subscriptionsExchange.successful() and !subscriptions.empty()}" class="wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Endpoint</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="hook : ${subscriptions.items()}">
+          <td th:text="${hook.name()}">name</td>
+          <td class="id"><code th:text="${hook.endpoint()}">endpoint</code></td>
+          <td><span th:replace="~{fragments :: badge(${hook.status()})}"></span></td>
+          <td class="right">
+            <a class="button quiet small" th:href="@{'/webhooks/' + ${hook.subscriptionId()}}">Open</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div th:if="${subscriptionsExchange.successful() and subscriptions.empty()}" class="empty">
+      <strong>No subscriptions</strong>
+      <span>Add one on the Webhooks screen.</span>
+    </div>
+    <div th:unless="${subscriptionsExchange.successful()}">
+      <div th:replace="~{fragments :: refused(${subscriptionsExchange}, 'the subscription list')}"></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

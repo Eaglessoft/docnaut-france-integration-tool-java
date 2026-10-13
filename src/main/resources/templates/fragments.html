@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+
+<!-- A status word, coloured by what it means for the operator. -->
+<span th:fragment="badge(value)" class="badge"
+      th:classappend="${value == null} ? '' :
+        (${#lists.contains({'ACCEPTED','ACTIVE','DELIVERED','SUCCEEDED'}, value)} ? 'good' :
+        (${#lists.contains({'DRAFT','PENDING','VERIFYING','RETRY_SCHEDULED'}, value)} ? 'wait' : 'stop'))"
+      th:text="${value} ?: '—'">STATUS</span>
+
+<!-- One API call, kept verbatim: status, correlation id, headers and the untouched body. -->
+<section th:fragment="call(call)" class="call"
+         th:classappend="${call.successful()} ? 'ok' : 'no'">
+  <h3 th:if="${call.unreachable()}">Unreachable
+    <small th:text="${call.operation().operationId()}">operationId</small></h3>
+  <h3 th:unless="${call.unreachable()}">
+    <span th:text="${call.status()}">200</span>
+    <small th:text="${call.operation().operationId()}">operationId</small>
+  </h3>
+  <p class="meta">
+    <span th:text="${call.operation().method()} + ' ' + ${call.operation().pathTemplate()}">GET /x</span>
+    · <span th:text="${call.durationMillis()} + ' ms'">0 ms</span>
+    <span th:if="${call.correlationId()}"> · correlation
+      <code th:text="${call.correlationId()}">id</code></span>
+  </p>
+  <p class="meta" th:if="${call.unreachable()}" th:text="${call.transportFailure()}">reason</p>
+  <dl th:if="${!call.shownHeaders().isEmpty()}">
+    <div th:each="header : ${call.shownHeaders()}" style="display:contents">
+      <dt th:text="${header.key}">name</dt>
+      <dd th:text="${header.value}">value</dd>
+    </div>
+  </dl>
+  <pre th:if="${call.body()}" th:text="${call.body()}">body</pre>
+</section>
+
+<!-- What a screen shows when a read it depends on was refused. -->
+<div th:fragment="refused(call, what)" class="empty">
+  <strong th:text="'The API returned ' + ${call.status()} + ' for ' + ${what}">refused</strong>
+  <span>Open the API calls below for the problem document and its correlation id.</span>
+</div>
+
+<!-- Paging that carries the cursor the API issued, never a page number. -->
+<form th:fragment="pager(path, cursor)" th:action="@{${path}}" method="get" th:if="${cursor}"
+      style="padding:14px 20px;border-top:1px solid var(--line)">
+  <input type="hidden" name="cursor" th:value="${cursor}">
+  <button type="submit" class="quiet small">Next page</button>
+</form>
+
+</body>
+</html>

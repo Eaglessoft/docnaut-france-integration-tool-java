@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="page(section, title, lead, actions, content)" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="'Docnaut France Integration Tool · ' + ${title}">Docnaut France Integration Tool</title>
+  <link rel="stylesheet" th:href="@{/assets/portal.css}">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><img class="brand-logo" th:src="@{/assets/docnaut-logo.webp}" alt="Docnaut"><small>France Integration Tool · Java</small></div>
+    <nav>
+      <a th:href="@{/}" th:classappend="${section == 'overview'} ? 'on'">Overview</a>
+      <a th:href="@{/documents}" th:classappend="${section == 'documents'} ? 'on'">Documents</a>
+      <a th:href="@{/peppol-facts}" th:classappend="${section == 'peppol'} ? 'on'">Peppol facts</a>
+      <a th:href="@{/reporting}" th:classappend="${section == 'reporting'} ? 'on'">Reporting</a>
+      <a th:href="@{/webhooks}" th:classappend="${section == 'webhooks'} ? 'on'">Webhooks</a>
+      <a th:href="@{/webhook-deliveries}" th:classappend="${section == 'deliveries'} ? 'on'">Deliveries</a>
+      <a th:href="@{/settings}" th:classappend="${section == 'settings'} ? 'on'">Settings</a>
+    </nav>
+    <div class="who">
+      Signed in as
+      <code th:text="${signedInClientId}">client</code>
+      <form th:action="@{/logout}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit" class="quiet small">Sign out</button>
+      </form>
+    </div>
+  </aside>
+  <main class="content">
+    <p class="environment" th:text="${selectedEnvironment}">Sandbox</p>
+    <p class="notice bad" th:if="${selectedEnvironment == 'Production'}">Production — requests can change real documents and settings.</p>
+    <div class="head">
+      <div>
+        <h1 th:text="${title}">Page</h1>
+        <p class="lead" th:if="${lead}" th:text="${lead}">lead</p>
+      </div>
+      <div class="actions" th:if="${actions}">
+        <div th:replace="${actions}">actions</div>
+      </div>
+    </div>
+    <div th:replace="${content}">content</div>
+    <details class="evidence" th:if="${exchanges != null and !exchanges.isEmpty()}">
+      <summary th:text="'API calls behind this screen (' + ${exchanges.size()} + ')'">API calls</summary>
+      <div th:each="call : ${exchanges}">
+        <div th:replace="~{fragments :: call(${call})}"></div>
+      </div>
+    </details>
+  </main>
+</div>
+</body>
+</html>

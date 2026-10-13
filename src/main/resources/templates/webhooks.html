@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('webhooks', 'Webhooks',
+        'Where this tenant asks the connector to notify it.', ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{/webhook-deliveries}" class="button quiet">Deliveries</a>
+</div>
+<div th:fragment="content">
+
+  <div th:if="${issuedSecret}" class="notice good">
+    <h2>Subscription created</h2>
+    <p>This signing secret is shown once and is never stored by the portal. Copy it now.</p>
+    <code class="secret" th:text="${issuedSecret}">secret</code>
+    <p style="margin-top:10px" th:if="${created}">
+      <a class="button small" th:href="@{'/webhooks/' + ${created.subscriptionId()}}">Open the subscription</a>
+    </p>
+  </div>
+  <div th:if="${exchange != null and !exchange.successful()}" class="notice bad">
+    <h2 th:text="${exchange.unreachable()} ? 'The Client API could not be reached'
+                 : 'The API rejected this subscription (' + ${exchange.status()} + ')'">Rejected</h2>
+    <p>Nothing was created. The problem document is in the API calls below.</p>
+  </div>
+
+  <div class="card tight">
+    <div th:if="${subscriptions != null and !subscriptions.empty()}" class="wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Endpoint</th><th>Events</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="hook : ${subscriptions.items()}">
+          <td th:text="${hook.name()}">name</td>
+          <td class="id"><code th:text="${hook.endpoint()}">endpoint</code></td>
+          <td th:text="${hook.mode() == 'SELECTED'} ? ${hook.eventTypes().size()} + ' selected' : 'All events'">events</td>
+          <td><span th:replace="~{fragments :: badge(${hook.status()})}"></span></td>
+          <td class="id" th:text="${hook.updatedAt()}">when</td>
+          <td class="right">
+            <a class="button quiet small" th:href="@{'/webhooks/' + ${hook.subscriptionId()}}">Open</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div th:replace="~{fragments :: pager('/webhooks', ${nextCursor})}"></div>
+    </div>
+    <div th:if="${subscriptions != null and subscriptions.empty()}" class="empty">
+      <strong>No subscriptions</strong>
+      <span>Add one below to start receiving notifications.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Add a subscription</h2>
+    <p class="hint">A new subscription starts as a draft; verify it before the connector will deliver to it.</p>
+    <form th:action="@{/webhooks}" method="post">
+      <div class="row">
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" name="name" required maxlength="100" placeholder="billing receiver">
+        </div>
+        <div class="field">
+          <label for="endpoint">HTTPS endpoint</label>
+          <input id="endpoint" name="endpoint" type="url" required pattern="https://.*"
+                 placeholder="https://receiver.example/events">
+        </div>
+      </div>
+      <div class="field">
+        <label>Events</label>
+        <div class="choice">
+          <input type="radio" id="mode-all" name="mode" value="ALL_CLIENT_EVENTS" checked>
+          <label for="mode-all">All client events</label>
+        </div>
+        <div class="choice">
+          <input type="radio" id="mode-selected" name="mode" value="SELECTED">
+          <label for="mode-selected">Only the ones I choose</label>
+        </div>
+        <div style="margin:8px 0 0 26px">
+          <div class="choice" th:each="type,i : ${eventTypes}">
+            <input type="checkbox" th:id="'type-' + ${i.index}" name="eventTypes" th:value="${type}">
+            <label th:for="'type-' + ${i.index}" th:text="${type}">type</label>
+          </div>
+        </div>
+      </div>
+      <button type="submit">Create subscription</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Open by id</h2>
+    <form th:action="@{/webhooks/open}" method="get" class="row">
+      <div class="field">
+        <label for="subscriptionId">Subscription id</label>
+        <input id="subscriptionId" name="subscriptionId" required>
+      </div>
+      <div class="field" style="flex:0 0 auto;align-self:end">
+        <button type="submit" class="quiet">Open</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: docnaut-france-integration-tool-java
+  labels:
+    app.kubernetes.io/name: docnaut-france-integration-tool-java
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: docnaut-france-integration-tool-java
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

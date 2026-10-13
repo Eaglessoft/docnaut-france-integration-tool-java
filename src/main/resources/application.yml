@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: client-test-portal
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 101MB
+      file-size-threshold: 0
+      resolve-lazily: true
+  thymeleaf:
+    cache: false
+
+server:
+  port: ${SERVER_PORT:8094}
+  tomcat:
+    max-swallow-size: -1
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+      timeout: 30m
+
+portal:
+  sandbox:
+    api-base-url: ${DOCNAUT_SANDBOX_API_BASE_URL:https://france-staging.docnaut.com/client/api/v1/}
+    token-url: ${DOCNAUT_SANDBOX_TOKEN_URL:https://france.docnaut.com/sso/realms/docnaut/protocol/openid-connect/token}
+    allow-insecure-http: ${DOCNAUT_SANDBOX_ALLOW_INSECURE_HTTP:false}
+  production:
+    api-base-url: ${DOCNAUT_PRODUCTION_API_BASE_URL:https://france.docnaut.com/client/api/v1/}
+    token-url: ${DOCNAUT_PRODUCTION_TOKEN_URL:https://france.docnaut.com/sso/realms/docnaut/protocol/openid-connect/token}
+    allow-insecure-http: ${DOCNAUT_PRODUCTION_ALLOW_INSECURE_HTTP:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO

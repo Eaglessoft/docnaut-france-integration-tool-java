@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('documents', 'Documents',
+        'Everything this tenant has submitted, newest first.', ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{/documents/send}" class="button">Send a document</a>
+</div>
+<div th:fragment="content">
+
+  <div class="card tight">
+    <div th:if="${exchange.successful() and !documents.empty()}" class="wrap">
+      <table>
+        <thead>
+        <tr><th>Number</th><th>Year</th><th>Category</th><th>File</th><th>Size</th>
+          <th>Status</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="document : ${documents.items()}">
+          <td th:text="${document.tenantDocumentNumber()}">number</td>
+          <td th:text="${document.documentYear()}">year</td>
+          <td th:text="${document.declaredDocumentCategory()}">category</td>
+          <td th:text="${document.originalFileName()}">file</td>
+          <td th:text="${document.contentLength()} + ' B'">size</td>
+          <td><span th:replace="~{fragments :: badge(${document.intakeStatus()})}"></span></td>
+          <td class="id" th:text="${document.createdAt()}">when</td>
+          <td class="right">
+            <a class="button quiet small"
+               th:href="@{'/documents/' + ${document.documentTraceId()}}">Open</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div th:replace="~{fragments :: pager('/documents', ${nextCursor})}"></div>
+    </div>
+    <div th:if="${exchange.successful() and documents.empty()}" class="empty">
+      <strong>No documents yet</strong>
+      <span>Send one and it will appear here.</span>
+    </div>
+    <div th:unless="${exchange.successful()}">
+      <div th:replace="~{fragments :: refused(${exchange}, 'the document list')}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Open by trace id</h2>
+    <p class="hint">If you already have a document trace id, go straight to it.</p>
+    <form th:action="@{/documents/open}" method="get" class="row">
+      <div class="field">
+        <label for="documentTraceId">Document trace id</label>
+        <input id="documentTraceId" name="documentTraceId" required>
+      </div>
+      <div class="field" style="flex:0 0 auto;align-self:end">
+        <button type="submit" class="quiet">Open</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+</body>
+</html>

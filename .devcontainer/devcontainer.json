@@ -1,0 +1,13 @@
+{
+  "name": "Docnaut Java integration tool",
+  "image": "maven:3.9.14-eclipse-temurin-25",
+  "forwardPorts": [
+    8094
+  ],
+  "portsAttributes": {
+    "8094": {
+      "label": "Java integration tool",
+      "onAutoForward": "notify"
+    }
+  }
+}

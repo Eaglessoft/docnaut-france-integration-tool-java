@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{layout :: page('deliveries', 'Delivery', ${deliveryId}, ~{::actions}, ~{::content})}">
+<body>
+<div th:fragment="actions">
+  <a th:href="@{/webhook-deliveries}" class="button quiet">All deliveries</a>
+</div>
+<div th:fragment="content">
+
+  <div th:if="${delivery}" class="card">
+    <h2>Delivery</h2>
+    <dl class="facts">
+      <dt>Status</dt><dd><span th:replace="~{fragments :: badge(${delivery.status()})}"></span></dd>
+      <dt>Event</dt><dd th:text="${delivery.eventType()}">event</dd>
+      <dt>Event id</dt><dd><code th:text="${delivery.eventId()}">id</code></dd>
+      <dt>Subscription</dt>
+      <dd><a th:href="@{'/webhooks/' + ${delivery.subscriptionId()}}"
+             th:text="${delivery.subscriptionId()}">subscription</a></dd>
+      <dt>Created</dt><dd th:text="${delivery.createdAt()}">when</dd>
+    </dl>
+  </div>
+  <div th:unless="${delivery}" class="card">
+    <h2>Delivery</h2>
+    <div th:replace="~{fragments :: refused(${exchange}, 'this delivery')}"></div>
+  </div>
+
+  <div th:if="${delivery}" class="card tight">
+    <h2>Attempts</h2>
+    <p class="hint">Each call the connector made to the endpoint, and how it ended.</p>
+    <div th:if="${!delivery.attempts().isEmpty()}" class="wrap">
+      <table>
+        <thead><tr><th>#</th><th>Outcome</th><th>HTTP</th><th>Started</th><th>Completed</th><th>Next attempt</th></tr></thead>
+        <tbody>
+        <tr th:each="attempt : ${delivery.attempts()}">
+          <td th:text="${attempt.attemptNumber()}">1</td>
+          <td><span th:replace="~{fragments :: badge(${attempt.outcome()})}"></span></td>
+          <td th:text="${attempt.httpStatus()} ?: '—'">200</td>
+          <td class="id" th:text="${attempt.startedAt()}">when</td>
+          <td class="id" th:text="${attempt.completedAt()} ?: '—'">when</td>
+          <td class="id" th:text="${attempt.nextAttemptAt()} ?: '—'">when</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div th:if="${delivery.attempts().isEmpty()}" class="empty">
+      <strong>No attempts recorded yet</strong>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
