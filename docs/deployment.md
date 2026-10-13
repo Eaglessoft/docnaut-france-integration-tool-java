@@ -40,3 +40,12 @@ Open `http://localhost:8094`. The manifests create one Deployment and one Cluste
 The Deployment uses one replica and Recreate updates because sessions live in process memory. Restarting or replacing the pod signs users out. Login probes show application availability; they do not check remote OAuth or API connectivity.
 
 For shared access, configure HTTPS and secure cookies using [configuration guidance](configuration.md). Size memory for expected uploads and concurrency; the supplied resource values are starting settings, not capacity guarantees.
+
+## Manual container publication
+
+Open **Actions → Validate and publish container → Run workflow** and select the source branch.
+Commits, pull requests and Git tags do not trigger this workflow. Validation must pass before publication.
+Each successful manual run publishes the same image as `<build-number>` and `latest`, where build number is
+GitHub's `run_number` (for example `12`). The OCI image version uses the same number. Java and C# follow
+the same format with independent repository counters; rerunning a run retains its number. Use a digest
+for an immutable deployment reference. Manual publication runs are serialized.
