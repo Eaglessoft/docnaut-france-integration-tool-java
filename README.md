@@ -24,7 +24,7 @@ For a container, see [container and deployment instructions](docs/deployment.md)
 | Overview and settings | Read your profile and configuration, replace configuration with an ETag, rotate your service-client secret |
 | Peppol facts | Read API-reported Peppol facts |
 | Documents | Upload documents, browse documents, inspect processing, events and artifacts, download artifacts, record inbound decisions |
-| Payments and reporting | Register an invoice payment, submit a reporting transmission, read reports and receipts |
+| Payments and reporting | Upload original payment CDAR (212) through Send a document, read lifecycle history, submit a reporting transmission, read reports and receipts |
 | Webhooks and deliveries | Create, inspect, update and verify subscriptions, rotate webhook secrets, inspect delivery history |
 
 Available actions depend on the API's permissions and document state. Submission acceptance does not establish final delivery. The tool displays API results; it does not implement invoice routing, government submission or a webhook receiver.

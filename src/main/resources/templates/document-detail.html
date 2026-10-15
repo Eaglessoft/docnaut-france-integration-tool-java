@@ -5,7 +5,7 @@
         'Trace ' + ${documentTraceId}, ~{::actions}, ~{::content})}">
 <body>
 <div th:fragment="actions">
-  <a th:href="@{'/documents/' + ${documentTraceId} + '/payment'}" class="button">Register payment</a>
+  <a th:href="@{/documents/send}" class="button">Upload payment CDAR (212)</a>
   <a th:href="@{/documents}" class="button quiet">All documents</a>
 </div>
 <div th:fragment="content">
@@ -204,6 +204,30 @@
     </div>
     <div th:if="${processing == null and processingExchange.status() != 404}">
       <div th:replace="~{fragments :: refused(${processingExchange}, 'the processing result')}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>CDAR lifecycle history</h2>
+    <p class="hint">212 may describe a partial collection or signed disbursement. Channel transport success does not imply business acceptance.</p>
+    <div th:if="${lifecycleExchange.successful() and lifecycle != null}">
+      <p th:if="${lifecycle.empty()}">No lifecycle events recorded.</p>
+      <section th:each="event : ${lifecycle.items()}">
+        <h3 th:text="${event.statusCode()} + ' — ' + ${event.direction()}">Status</h3>
+        <p th:text="${event.occurredAt()}"></p>
+        <p><code th:text="${event.eventId()}"></code></p>
+        <p th:text="${event.reasonCode()}"></p><p th:text="${event.note()}"></p>
+        <h4>Declared payment facts</h4><pre th:text="${event.payment()}"></pre>
+        <h4>Independent channel outcomes</h4><pre th:text="${event.channels()}"></pre>
+        <a th:href="@{'/documents/' + ${event.sourceDocumentTraceId()}}">Open original CDAR document</a>
+        <form th:action="@{'/documents/' + ${event.sourceDocumentTraceId()} + '/download'}" method="post">
+          <input type="hidden" name="artifactId" th:value="${event.sourceArtifactId()}">
+          <button type="submit" class="quiet small">Download original CDAR</button>
+        </form>
+      </section>
+    </div>
+    <div th:unless="${lifecycleExchange.successful()}">
+      <div th:replace="~{fragments :: refused(${lifecycleExchange}, 'the lifecycle history')}"></div>
     </div>
   </div>
 

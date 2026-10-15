@@ -56,7 +56,6 @@ public final class ApiViews {
                 ? new ReportingResult(text(node,"category"),text(node,"kind"),node.path("revision").asInt(),
                         text(node,"previousReportId"),node.path("replayed").asBoolean()) : null);
     }
-    public record PaymentResult(String paymentId, String reportId, boolean replayed) {}
     public static Report reportResult(String body) {
         return read(body, value -> {
             var node = value.has("report") ? value.path("report") : value;
@@ -65,10 +64,6 @@ public final class ApiViews {
                     text(node, "status"), text(node, "periodStart"), text(node, "periodEnd"),
                     stamp(text(node, "transmittedAt")), text(node, "transportReference"), stamp(text(node, "createdAt")));
         });
-    }
-    public static PaymentResult paymentResult(String body) {
-        return read(body, node -> node.path("paymentId").isString() && node.path("reportId").isString()
-                ? new PaymentResult(text(node, "paymentId"), text(node, "reportId"), node.path("replayed").asBoolean()) : null);
     }
 
     public static Profile profile(String body) {
@@ -93,6 +88,17 @@ public final class ApiViews {
 
     public static Document document(String body) {
         return read(body, ApiViews::document);
+    }
+
+    public record LifecycleEvent(String eventId, String sourceDocumentTraceId, String sourceArtifactId,
+            String direction, String statusCode, String occurredAt, String reasonCode, String note,
+            String payment, String channels) { }
+
+    public static Page<LifecycleEvent> lifecycleEvents(String body) {
+        return page(body, node -> new LifecycleEvent(text(node, "eventId"), text(node, "sourceDocumentTraceId"),
+                text(node, "sourceArtifactId"), text(node, "direction"), text(node, "statusCode"),
+                stamp(text(node, "occurredAt")), text(node, "reasonCode"), text(node, "note"),
+                node.path("payment").toString(), node.path("channels").toString()));
     }
 
     public static Page<Event> events(String body) {

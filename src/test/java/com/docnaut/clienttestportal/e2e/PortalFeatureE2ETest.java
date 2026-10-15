@@ -46,6 +46,16 @@ class PortalFeatureE2ETest {
         AtomicReference<String> upload = new AtomicReference<>();
         AtomicReference<String> uploadKey = new AtomicReference<>();
         AtomicReference<String> uploadContentType = new AtomicReference<>();
+        AtomicReference<String> lifecycleBody = new AtomicReference<>("""
+                {"items":[{"eventId":"44444444-4444-4444-4444-444444444444","invoiceDocumentTraceId":"22222222-2222-2222-2222-222222222222","sourceDocumentTraceId":"22222222-2222-2222-2222-222222222222",
+                "sourceArtifactId":"33333333-3333-3333-3333-333333333333","direction":"CUSTOMER",
+                "statusCode":"212","occurredAt":"2026-10-15T10:00:00Z","payment":{"date":"2026-10-15","amount":-25.50,
+                "currency":"EUR","cancellationReason":"Partial reversal","allocations":[{"rate":20,"amount":-25.50}]},
+                "channels":[{"channel":"PPF","status":"RETRYABLE","errorCode":"TEMPORARY"},
+                {"channel":"CHORUS","status":"UPLOADED"}]}]}
+                """);
+        AtomicReference<Integer> lifecycleStatus = new AtomicReference<>(200);
+        AtomicReference<String> lifecycleQuery = new AtomicReference<>();
         AtomicReference<String> unexpectedRequest = new AtomicReference<>();
         HttpServer partner = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         partner.createContext("/", exchange -> {
@@ -76,6 +86,19 @@ class PortalFeatureE2ETest {
                 body = DOCUMENT;
             } else if (path.equals("/client/api/v1/documents") && method.equals("GET")) {
                 body = "{\"items\":[" + (upload.get() == null ? "" : DOCUMENT) + "],\"nextCursor\":null}";
+            } else if (path.equals("/client/api/v1/documents/" + TRACE + "/lifecycle-events") && method.equals("GET")) {
+                lifecycleQuery.set(exchange.getRequestURI().getRawQuery());
+                status = lifecycleStatus.get();
+                body = lifecycleBody.get();
+            } else if (path.equals("/client/api/v1/documents/" + TRACE) && method.equals("GET")) {
+                body = DOCUMENT;
+            } else if (path.equals("/client/api/v1/documents/" + TRACE + "/decision") && method.equals("GET")) {
+                status = 404; body = "{}";
+            } else if ((path.equals("/client/api/v1/documents/" + TRACE + "/events")
+                    || path.equals("/client/api/v1/documents/" + TRACE + "/artifacts")) && method.equals("GET")) {
+                body = "{\"items\":[]}";
+            } else if (path.equals("/client/api/v1/documents/" + TRACE + "/processing") && method.equals("GET")) {
+                status = 404; body = "{}";
             } else {
                 unexpectedRequest.set(method + " " + path);
                 status = 404;
@@ -141,6 +164,22 @@ class PortalFeatureE2ETest {
             var documents = get(http, base + "/documents");
             assertThat(documents.statusCode()).isEqualTo(200);
             assertThat(documents.body()).contains("PORTAL-E2E-1", "invoice.xml", TRACE).doesNotContain("No documents yet");
+            // The portal forwards the caller's original CDAR bytes, never a payment JSON projection.
+            String cdar = new String(getClass().getResourceAsStream("/fixtures/cdar-212.xml").readAllBytes(), StandardCharsets.UTF_8);
+            String paymentUpload = multipart.replace("invoice.xml", "payment-212.xml").replace(INVOICE, cdar);
+            assertThat(sendMultipart(http, base + "/documents?_csrf=" + field(form.body(), "_csrf"), paymentUpload).statusCode()).isEqualTo(200);
+            assertThat(upload.get()).contains("filename=\"payment-212.xml\"", cdar);
+            var detail = get(http, base + "/documents/" + TRACE);
+            assertThat(detail.statusCode()).isEqualTo(200);
+            assertThat(detail.body()).contains("CDAR lifecycle history", "212 — CUSTOMER", "-25.50", "Partial reversal",
+                    "RETRYABLE", "TEMPORARY", "UPLOADED", "Download original CDAR", "Upload payment CDAR (212)")
+                    .doesNotContain("Register payment", "/payment\"");
+            assertThat(lifecycleQuery.get()).isNull();
+            lifecycleBody.set("{\"items\":[]}");
+            assertThat(get(http, base + "/documents/" + TRACE).body()).contains("No lifecycle events recorded.");
+            lifecycleStatus.set(403);
+            assertThat(get(http, base + "/documents/" + TRACE).body()).contains("The API returned 403 for the lifecycle history").doesNotContain("No lifecycle events recorded.");
+            lifecycleStatus.set(200);
             assertThat(post(http, base + "/logout", "").statusCode()).isEqualTo(403);
             assertThat(post(http, base + "/logout", "_csrf=" + field(documents.body(), "_csrf")).statusCode()).isEqualTo(302);
             assertThat(get(http, base + "/documents").statusCode()).isEqualTo(302);

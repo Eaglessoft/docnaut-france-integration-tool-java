@@ -27,7 +27,7 @@
 
   <div class="card">
     <h2>Document</h2>
-    <p class="hint">Document identity and category are extracted from the validated file.</p>
+    <p class="hint">Document identity and category are extracted from the validated file. For a payment, upload the original CDAR XML with status 212. The connector links the invoice from the file; this form does not construct payment facts. After processing, open the source CDAR or invoice to read lifecycle history.</p>
     <form th:action="@{/documents}" method="post" enctype="multipart/form-data">
       <div class="field">
         <label for="source">File</label>

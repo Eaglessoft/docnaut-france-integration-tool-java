@@ -10,7 +10,11 @@ The Production banner identifies requests that can affect real data. Client perm
 
 Upload a source document through Documents. Preserve its returned trace identifier when inspecting processing, events, artifacts or subsequent actions. An intake success is not a delivery receipt. Inspect processing and event responses for the current result.
 
-Artifact downloads are requested through the API and streamed by the application. Inbound decisions and payments use the selected document's identifier. Supply the fields requested by the form; do not infer accounting values from delivery status.
+Artifact downloads are requested through the API and streamed by the application. Inbound decisions use the selected document's identifier.
+
+For a payment or disbursement, use **Send a document** to upload the original CDAR XML with status 212. The multipart `source` part is sent through `POST /client/api/v1/documents` with an idempotency key. The connector extracts payment facts and the invoice reference from the file; the tool does not synthesize a CDAR or send a payment JSON request.
+
+After processing, open the source CDAR or invoice and inspect **CDAR lifecycle history** (`GET /client/api/v1/documents/{documentTraceId}/lifecycle-events`). Each retained event shows its signed payment facts and independent channel outcomes. A 212 can represent a partial collection or disbursement, so do not infer full payment from one event. UPLOADED/SENT is a transport result, not business acceptance. Open or download the original CDAR using the source document and artifact identifiers shown by the API.
 
 ## Reporting, webhooks and settings
 

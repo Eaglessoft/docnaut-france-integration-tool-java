@@ -3,8 +3,6 @@ package com.docnaut.clienttestportal.web;
 import com.docnaut.clienttestportal.api.*;
 import com.docnaut.clienttestportal.view.ApiViews;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.*;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
@@ -63,58 +61,6 @@ public class ReportingController {
         model.addAttribute("receiptsExchange", receipts);
         model.addAttribute("receipts", ApiViews.reportReceipts(receipts.body()));
         return "report-detail";
-    }
-
-    @GetMapping("/documents/{documentId}/payment")
-    public String payment(@PathVariable String documentId, Model model) {
-        model.addAttribute("documentId", documentId);
-        if (!model.containsAttribute("fields")) model.addAttribute("fields", Map.of());
-        if (!model.containsAttribute("idempotencyKey")) model.addAttribute("idempotencyKey", UUID.randomUUID());
-        return "payment";
-    }
-
-    @PostMapping("/documents/{documentId}/payment")
-    public String pay(@PathVariable String documentId, @RequestParam MultiValueMap<String, String> fields, Model model) {
-        model.addAttribute("fields", fields.toSingleValueMap());
-        model.addAttribute("idempotencyKey", fields.getFirst("idempotencyKey"));
-        UUID key = key(fields, model);
-        if (key == null) return payment(documentId, model);
-        Map<String, Object> body;
-        try { body = paymentBody(fields); }
-        catch (IllegalArgumentException | java.time.DateTimeException invalid) {
-            model.addAttribute("formError", "Enter valid decimal amounts and an occurrence time with UTC offset.");
-            return payment(documentId, model);
-        }
-        ApiExchange exchange = api.call(ApiRequests.of(ClientApiOperation.REGISTER_INVOICE_PAYMENT)
-                .path(documentId).idempotencyKey(key).body(body).build());
-        ResultModel.apply(model, exchange);
-        model.addAttribute("payment", ApiViews.paymentResult(exchange.body()));
-        return payment(documentId, model);
-    }
-
-    static Map<String, Object> paymentBody(MultiValueMap<String, String> fields) {
-        for (String name : List.of("amount", "currency", "paymentReference", "occurredAt")) {
-            if (fields.getFirst(name) == null || fields.getFirst(name).isBlank()) throw new IllegalArgumentException("Missing field");
-        }
-        Map<String, Object> payment = new LinkedHashMap<>();
-        payment.put("amount", new BigDecimal(fields.getFirst("amount")));
-        payment.put("currency", fields.getFirst("currency"));
-        List<Map<String, BigDecimal>> allocation = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            String rate = fields.getFirst("rate" + i), amount = fields.getFirst("vatAmount" + i);
-            if ((rate == null || rate.isBlank()) && (amount == null || amount.isBlank())) continue;
-            allocation.add(Map.of("rate", new BigDecimal(rate == null ? "" : rate),
-                    "amount", new BigDecimal(amount == null ? "" : amount)));
-        }
-        payment.put("vatBreakdown", allocation);
-        for (String name : List.of("remainingAmount", "discountAmount")) {
-            String value = fields.getFirst(name);
-            if (value != null && !value.isBlank()) payment.put(name, new BigDecimal(value));
-        }
-        String cancellation = fields.getFirst("cancellationReason");
-        if (cancellation != null && !cancellation.isBlank()) payment.put("cancellationReason", cancellation);
-        return Map.of("paymentReference", fields.getFirst("paymentReference"),
-                "occurredAt", Instant.parse(fields.getFirst("occurredAt")).toString(), "payment", payment);
     }
 
     private static UUID key(MultiValueMap<String, String> fields, Model model) {

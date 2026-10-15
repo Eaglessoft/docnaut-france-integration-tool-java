@@ -109,7 +109,11 @@ public class DocumentController {
                 .path(documentTraceId).build());
         ApiExchange artifacts = api.call(ApiRequests.of(ClientApiOperation.LIST_DOCUMENT_ARTIFACTS)
                 .path(documentTraceId).page(null, PAGE).build());
-        ResultModel.apply(model, submission, document, decision, processing, events, artifacts);
+        ApiExchange lifecycle = api.call(ApiRequests.of(ClientApiOperation.LIST_DOCUMENT_LIFECYCLE_EVENTS)
+                .path(documentTraceId).build());
+        ResultModel.apply(model, submission, document, decision, processing, events, artifacts, lifecycle);
+        model.addAttribute("lifecycle", ApiViews.lifecycleEvents(lifecycle.body()));
+        model.addAttribute("lifecycleExchange", lifecycle);
         model.addAttribute("documentTraceId", documentTraceId);
         model.addAttribute("document", ApiViews.document(document.body()));
         model.addAttribute("documentExchange", document);
